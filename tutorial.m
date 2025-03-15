@@ -123,8 +123,8 @@ W_dcon1=out.dcon_out(:,2);
 dcon_performance_plot=figure();
 subplot(1,2,1);plot(T_out,W_dcon1_ref,T_out,W_dcon1);
 legend("Set Speed","Speed",'Location', 'northwest'); title('Controller Performance');
-subplot(1,2,2);plot(T_out,(W_dcon1_ref-W_dcon1)./W_dcon1_ref,[0,time_all],[0.02,0.02]);
-legend("Error Percentage","2% Margin"); title("Error");
+subplot(1,2,2);plot(T_out,(W_dcon1_ref-W_dcon1)./W_dcon1_ref,[0,time_all],[0.02,0.02],[0,time_all],[-0.02,-0.02]);
+legend("Error Percentage","2% Margin","-2% Margin"); title("Error");
 dcon_performance_plot.Position=[100,100,1000,600];
 
 %% Post processing for equation motion
