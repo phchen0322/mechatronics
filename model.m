@@ -74,30 +74,30 @@ EN.wind_v_Sample=[time_Vector repmat(EN.wind_speed,time_all/time_interval,1)];%N
 
 
 %% Thrust Allocation, struct TA
-TA.config3_T=[1	0	1	0	0;
-0	1	0	1	1;
-0.065	-0.35	-0.065	-0.35	0.35];
+TA.config3_T=[1      0     1      0    0;
+              0      1     0      1    1;
+              0.065 -0.35 -0.065 -0.35 0.35];
 thrust_Raw=load('data_Thrust.mat');
 % ps data: rpm=501.15 \sqrt(thrust)+186.43
 %TA.poly_thrust_ps1=[3.540E-6,-7.340E-4,0];
 %TA.poly_thrust_ps2=[3.263E-6,-9.771E-4,0];
-TA.poly_thrust_ps=[511.95,137.04];
-TA.poly_thrust_sb=[602.77,145.38];
-TA.poly_thrust_bow=[0.2934,0.1577];
+% TA.poly_thrust_ps=[511.95,137.04];
+% TA.poly_thrust_sb=[602.77,145.38];
+% TA.poly_thrust_bow=[0.2934,0.1577];
 % Note that in the wetmodel dc motors are 608.58, 200
 % Note that in the wetmodel bow thruster is 0.13 0.17 (*0.8)
 
-plot_thrust_fit=figure();
-subplot(1,3,1);
-plot(thrust_Raw.data_Thrust_ps(:,1),thrust_Raw.data_Thrust_ps(:,2), 'o',...
-    thrust_cal_sign(TA.poly_thrust_ps,-3:0.05:3),[-3:0.05:3])
-subplot(1,3,2);
-plot(thrust_Raw.data_Thrust_sb(:,1),thrust_Raw.data_Thrust_sb(:,2), 'o',...
-    thrust_cal_sign(TA.poly_thrust_sb,-3:0.05:3),[-3:0.05:3])
-subplot(1,3,3);
-plot(thrust_Raw.data_Thrust_bow(:,1),thrust_Raw.data_Thrust_bow(:,2), 'o',...
-    thrust_bow_sign(TA.poly_thrust_bow,[-2:0.05:2]),[-2:0.05:2])
-set(plot_thrust_fit,'position',[100,100,1000,600])
+% plot_thrust_fit=figure();
+% subplot(1,3,1);
+% plot(thrust_Raw.data_Thrust_ps(:,1),thrust_Raw.data_Thrust_ps(:,2), 'o',...
+%     thrust_cal_sign(TA.poly_thrust_ps,-3:0.05:3),[-3:0.05:3])
+% subplot(1,3,2);
+% plot(thrust_Raw.data_Thrust_sb(:,1),thrust_Raw.data_Thrust_sb(:,2), 'o',...
+%     thrust_cal_sign(TA.poly_thrust_sb,-3:0.05:3),[-3:0.05:3])
+% subplot(1,3,3);
+% plot(thrust_Raw.data_Thrust_bow(:,1),thrust_Raw.data_Thrust_bow(:,2), 'o',...
+%     thrust_bow_sign(TA.poly_thrust_bow,[-2:0.05:2]),[-2:0.05:2])
+% set(plot_thrust_fit,'position',[100,100,1000,600])
 
 
 %% DC Motors, struct DC
@@ -113,6 +113,30 @@ DC.Cm = 2.909e-05; % Nm/(rad/s)
 DC.wrated=564.9; %rated speed, rad/s;
 DC.irated=9;%rated current, A
 DC.vrated=12;%rated voltage, V
+
+%% Shafts
+shaft.inertia1 = 1.974e-5; % kg m2
+shaft.inertia2 = 2.06293e-6; % kg m2
+shaft.inertia3 = 1.96350e-8; % kg m2
+
+shaft.friction1 = 0; % kg m2/s
+shaft.friction2 = 0; % kg m2/s
+shaft.friction3 = 0; % kg m2/s
+
+shaft.gearRatio1to2 = 1/3;
+shaft.gearRatio2to3 = 1;
+
+shaft.fullInertiaTranslatedTo1 = DC.Jm + shaft.inertia1 + shaft.inertia2 * shaft.gearRatio1to2^2 + shaft.inertia3 * shaft.gearRatio1to2^2 * shaft.gearRatio2to3^2;
+shaft.fullFrictionTranslatedTo1 = DC.Cm + shaft.friction1 + shaft.friction2 * shaft.gearRatio1to2^2 + shaft.friction3 * shaft.gearRatio1to2^2 * shaft.gearRatio2to3^2;
+
+%% Propellers
+propeller.diameter = 0.065;
+propeller.waterDensity = 1000;
+propellerCurves = importdata('propeller.txt');
+propeller.J = propellerCurves.data(:,1);
+propeller.KT = propellerCurves.data(:,2);
+propeller.KQ = propellerCurves.data(:,3);
+
 
 %% DC Motor Controller, struct DCon
 DCon.load_const=5.85E-7; % before properller model finished, for now simply 
@@ -145,13 +169,13 @@ tau_Sample=[time_Vector force_x_Sample force_y_Sample force_r_Sample];
 %% Thrust Simulatior, simulating the output thrust by acuators, structure TSim
 % based on the input rpm, andgle and gain, calculate the tau (BODY frame)
 % interpolation of the curve thrust to speed, but add (0,0)
-thrust_Raw=load('data_Thrust.mat');
-TSim.thrust_ps_rpm=thrust_Raw.data_Thrust_ps;
-TSim.thrust_ps_rpm=[TSim.thrust_ps_rpm(1:8,:);0,0;TSim.thrust_ps_rpm(9:end,:)];
-TSim.thrust_sb_rpm=thrust_Raw.data_Thrust_sb;
-TSim.thrust_sb_rpm=[TSim.thrust_sb_rpm(1:8,:);0,0;TSim.thrust_sb_rpm(9:end,:)];
-TSim.thrust_bow_gain=thrust_Raw.data_Thrust_bow;
-TSim.thrust_bow_gain(8,:)=[0,0];
+% thrust_Raw=load('data_Thrust.mat');
+% TSim.thrust_ps_rpm=thrust_Raw.data_Thrust_ps;
+% TSim.thrust_ps_rpm=[TSim.thrust_ps_rpm(1:8,:);0,0;TSim.thrust_ps_rpm(9:end,:)];
+% TSim.thrust_sb_rpm=thrust_Raw.data_Thrust_sb;
+% TSim.thrust_sb_rpm=[TSim.thrust_sb_rpm(1:8,:);0,0;TSim.thrust_sb_rpm(9:end,:)];
+% TSim.thrust_bow_gain=thrust_Raw.data_Thrust_bow;
+% TSim.thrust_bow_gain(8,:)=[0,0];
 % -0.5 for -90degree +0.5 for -90 degree, use config 3
 TSim.config3_T=TA.config3_T;
 speed_ps_angle_Sample=0*ones(time_all/time_interval,1);
@@ -166,7 +190,7 @@ TSim.speed_Sampe=[time_Vector,speed_ps_angle_Sample,speed_sb_angle_Sample,...
 % struct PCon
 PCon.KX=[0.005;0;0.01;100]; %P, I, D and N
 PCon.KY=[0.1;0;0.1;100]; %P, I, D and N
-PCon.KN=[0;0;0;100]; %P, I, D and N
+PCon.KN=[0.1;0;0;100]; %P, I, D and N
 % PCon.KX=[0.006673;0.0004631;2.1557;12.6]; %P, I, D and N
 % PCon.KY=[0.1697;0.0007710;4.7815;6.41]; %P, I, D and N
 % PCon.KN=[0.14737;0.004640;1.0114;1.7889]; %P, I, D and N
@@ -178,7 +202,7 @@ Eta_initial=[0;0;0]; % initial position as zeros
 
 %% Set conditions
 % Eta_Ref=[0.1;0;0];
-Eta_Ref=[0.5;0;0];
+Eta_Ref=[0.5;-0.8;0.4];
 
 %% Simulation
 paramStruct.StartTime="0";
