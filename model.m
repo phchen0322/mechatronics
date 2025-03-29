@@ -74,9 +74,13 @@ EN.wind_v_Sample=[time_Vector repmat(EN.wind_speed,time_all/time_interval,1)];%N
 
 
 %% Thrust Allocation, struct TA
+% for experiment pls change TA.config to 3 or 5
 TA.config3_T=[1      0     1      0    0;
               0      1     0      1    1;
               0.065 -0.35 -0.065 -0.35 0.35];
+TA.config5_T=[0,1,0;1,0,1;-0.35,-0.065,0.35];
+TA.config5_T_inv=inv(TA.config5_T);
+TA.config=3; % the chosen config
 thrust_Raw=load('data_Thrust.mat');
 % ps data: rpm=501.15 \sqrt(thrust)+186.43
 %TA.poly_thrust_ps1=[3.540E-6,-7.340E-4,0];
@@ -195,6 +199,11 @@ PCon.KN=[0.1;0;0;100]; %P, I, D and N
 % PCon.KY=[0.1697;0.0007710;4.7815;6.41]; %P, I, D and N
 % PCon.KN=[0.14737;0.004640;1.0114;1.7889]; %P, I, D and N
 
+%% Battery, struct BAT
+BAT=load('BatParameters.mat').Bat;
+BAT.power_others=5; % suppose other components consumes 5W in total on average
+BAT.converter_efficiency=0.95; % suppose the buck-boost converter has an efficiency of 95%
+
 %% Initial conditions
 % V_initial=[0;0;0]; % initial velocity as zeros
 V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
@@ -261,3 +270,17 @@ end
 
 figure;
 plot(Eta(:,2),Eta(:,1));xlabel('y');ylabel('x');axis equal;
+
+%% Plot for battery output
+bat_plot=figure();
+subplot(1,3,1);
+yyaxis left;plot(T_out,out.bat_out(:,1));
+yyaxis right;plot(T_out,out.bat_out(:,2));
+title('Voltage & Current');legend("Voltage/V","Current/A");
+subplot(1,3,2);
+plot(T_out,out.bat_out(:,3));title("SoC");
+subplot(1,3,3);
+yyaxis left;plot(T_out,out.power_out(:,1));
+yyaxis right;plot(T_out,out.power_out(:,2));
+title(['Power & Energy with Config', num2str(TA.config)]);legend("Power/W","Energy/J");
+bat_plot.Position=[100,100,1000,600];
