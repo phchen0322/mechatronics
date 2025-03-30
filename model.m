@@ -204,6 +204,9 @@ BAT=load('BatParameters.mat').Bat;
 BAT.power_others=5; % suppose other components consumes 5W in total on average
 BAT.converter_efficiency=0.95; % suppose the buck-boost converter has an efficiency of 95%
 
+%% Kalman filter
+TSamplingKalman = 0.1;
+
 %% Initial conditions
 % V_initial=[0;0;0]; % initial velocity as zeros
 V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
