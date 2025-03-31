@@ -6,7 +6,7 @@ close all
 %% INPUTS
 %% Simulation Timeline
 time_interval=0.01; % interval 0.01 seconds
-time_all=120; % total time 120 seconds
+time_all=200; % total time 200 seconds
 time_Vector = linspace(0,time_all,time_all/time_interval).';
 
 %% Equations of motion, struct TN (TitoNeri)
@@ -205,7 +205,44 @@ BAT.power_others=5; % suppose other components consumes 5W in total on average
 BAT.converter_efficiency=0.95; % suppose the buck-boost converter has an efficiency of 95%
 
 %% Kalman filter
-TSamplingKalman = 0.1;
+kalman.TSampling = 0.1;
+unknownForcesExpectedAmplitude = diag([1.2 1.2 1.2]);
+inverseFullMass = eye(3) / (TN.rigid_body_Mass + TN.added_Mass);
+
+kalman.Q = [zeros(3,3) , zeros(3,3) ; zeros(3,3) , (inverseFullMass * unknownForcesExpectedAmplitude * kalman.TSampling)^2];
+kalman.R = diag([0.06^2 0.06^2 0.009^2]);
+kalman.H = [eye(3) zeros(3,3)];
+
+targetOvershoot = 0.05;
+targetRiseTime = 20;
+kalman.KDiscreteIntegrators = diag([0.026 0.01 0.01]);
+
+kalman.sqrtR = chol(kalman.R);
+
+C0 = zeros(3,3);
+d110 = polyval(TN.X_coef_d11_over_u,0);
+d220 = polyval(TN.Y_coef_d22_over_v,0);
+d330 = polyval(TN.N_coef_d33_over_r,0);
+D0 = diag([d110 d220 d330]);
+kalman.continuousStateTransitionAround0 = [zeros(3,3) eye(3) ; zeros(3,3) -inverseFullMass*(C0 + D0)];
+kalman.continuousStateInputTransitionAround0 = [zeros(3,3) ; inverseFullMass];
+
+continuousLinearizationAround0 = ss(kalman.continuousStateTransitionAround0, kalman.continuousStateInputTransitionAround0, kalman.H, zeros(3,3));
+discreteLinearizationAround0 = c2d(continuousLinearizationAround0, kalman.TSampling, 'zoh');
+
+kalman.stateTransition = discreteLinearizationAround0.A;
+kalman.inputStateTransition = discreteLinearizationAround0.B;
+
+targetDampingRatio = -log(targetOvershoot)/sqrt(pi^2 + log(targetOvershoot)^2);
+targetUndampedFrequency = 1/(targetRiseTime * sqrt(1 - targetDampingRatio^2)) * (pi - atan(sqrt(1 - targetDampingRatio^2)/targetDampingRatio));
+
+dominantPole1 = (-targetDampingRatio + sqrt(targetDampingRatio^2 - 1))*targetUndampedFrequency;
+dominantPole2 = (-targetDampingRatio - sqrt(targetDampingRatio^2 - 1))*targetUndampedFrequency;
+
+sPoles = [dominantPole1 dominantPole2 -0.1 -0.2 -0.3 -0.4];
+zPoles = exp(sPoles * kalman.TSampling);
+
+kalman.discreteControllerGains = place(discreteLinearizationAround0.A, discreteLinearizationAround0.B, zPoles);
 
 %% Initial conditions
 % V_initial=[0;0;0]; % initial velocity as zeros
