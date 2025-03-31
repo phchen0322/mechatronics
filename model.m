@@ -288,6 +288,19 @@ subplot(1,2,2);plot(T_out,(W_dcon1_ref-W_dcon1)./W_dcon1_ref,[0,time_all],[0.02,
 legend("Error Percentage","2% Margin","-2% Margin"); title("Error");
 dcon_performance_plot.Position=[100,100,1000,600];
 
+%% Plot for karlman filter performance
+km_Eta_est=squeeze(out.KM_est_out);
+km_plot=figure();
+title_char=["Estimated","True","Measured"];
+for i=1:3
+    subplot(1,3,i);
+    plot(T_out,km_Eta_est(i*3-2,:),T_out,km_Eta_est(i*3-1,:),T_out,km_Eta_est(i*3,:));
+    title(title_char(i))
+    legend('x','y','\psi');
+end
+km_plot.Position=[100,100,1000,600];
+
+
 %% Post processing for equation motion
 Eta=squeeze(out.Eta).';
 V=squeeze(out.V).';
