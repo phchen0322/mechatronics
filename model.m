@@ -248,13 +248,23 @@ zPoles = exp(sPoles * kalman.TSampling);
 kalman.discreteControllerGains = place(discreteLinearizationAround0.A, discreteLinearizationAround0.B, zPoles);
 
 %% Initial conditions
-% V_initial=[0;0;0]; % initial velocity as zeros
-V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
+V_initial=[0;0;0]; % initial velocity as zeros
+% V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
 Eta_initial=[0;0;0]; % initial position as zeros
 
 %% Set conditions
-% Eta_Ref=[0.1;0;0];
-Eta_Ref=[0.5;-0.8;0.4];
+Eta_Ref=[0;0;0];
+% Eta_Ref=[0.5;-0.8;0.4];
+
+%% Setting the important parameters together
+TA.config=3; % Choosing thrust allocation configuration
+kalman.enable_flag=0; % enable or disable kalman filter in closed loop
+EN.current_speed=[0*0.15 0*0.15]; % Set current speed(in NED frame, only X and Y)
+EN.current_v_Sample=[time_Vector repmat(EN.current_speed,time_all/time_interval,1)];
+V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
+EN.wind_speed=[0 0]; % Set wind speed (in NED frame, only X and Y)
+EN.wind_v_Sample=[time_Vector repmat(EN.wind_speed,time_all/time_interval,1)];%NED
+Eta_Ref=[1;0;0]; % desired set point
 
 %% Simulation
 paramStruct.StartTime="0";
@@ -340,3 +350,28 @@ yyaxis left;plot(T_out,out.power_out(:,1));
 yyaxis right;plot(T_out,out.power_out(:,2));
 title(['Power & Energy with Config', num2str(TA.config)]);legend("Power/W","Energy/J");
 bat_plot.Position=[100,100,1000,600];
+
+%% Structuralized output for DP
+% close all; % close all other plots
+dp_plot=figure();
+title_char=["x","y","\psi"];
+for i=1:3
+    subplot(3,2,2*i-1);
+    plot([0,T_out(end)],[Eta_Ref(i),Eta_Ref(i)],T_out,Eta(:,i));
+    legend("Setpoint","Actual",'Location','best');
+    title(title_char(i)+" (NED)");
+end
+ax =subplot(3,2,2);status_chr=["ON","OFF"];config_chr=["III","V"];
+config_string=sprintf("StartingPoint = (%.2f, %.2f, %.2f)\n",Eta_initial(1),Eta_initial(2),Eta_initial(3));
+config_string=config_string+sprintf("Setpoint = (%.2f, %.2f, %.2f)\n",Eta_Ref(1),Eta_Ref(2),Eta_Ref(3));
+config_string=config_string+sprintf("InitialVelocity = (%.4f, %.4f, %.2f)\n",V_initial(1),V_initial(2),V_initial(3));
+config_string=config_string+sprintf("CurrentVelocity = (%.4f, %.4f)\n",EN.current_speed(1),EN.current_speed(2));
+config_string=config_string+sprintf("WindSpeed = (%.2f, %.2f)\n",EN.wind_speed(1),EN.wind_speed(2));
+config_string=config_string+sprintf("Using Thrust Allocation Config %s\n",config_chr((TA.config-1)/2));
+config_string=config_string+sprintf("Kalman Filter is %s",status_chr(2-kalman.enable_flag));
+text(0,0.5,config_string);
+set (ax, 'visible', 'off')
+subplot(3,2,[4,6]);
+plot(Eta(:,2),Eta(:,1));xlabel('y');ylabel('x');
+title("Trace (NED)");axis equal;
+dp_plot.Position=[100,100,800,500];
