@@ -41,10 +41,12 @@ TN.N_coef_d33_over_r=N_coef_d33(1:3);
 % Fit check: plot the original curve and the fitted curve in X and Y
 fit_damping_plot=figure();
 subplot(1,2,1);
-plot(Xdata_d11(:,1),Xdata_d11(:,2),Xdata_d11(:,1),polyval([TN.X_coef_d11_over_u,0],Xdata_d11(:,1)));
+plot(Xdata_d11(:,1),Xdata_d11(:,2),'*',Xdata_d11(:,1),polyval([TN.X_coef_d11_over_u,0],Xdata_d11(:,1)));
+legend("Measured","Fit");xlabel("Velocity [m/s]");ylabel("Force [N]");
 title('Fit of damping X'); grid on;
 subplot(1,2,2);
-plot(Ydata_d22(:,1),Ydata_d22(:,2),Ydata_d22(:,1),polyval([TN.Y_coef_d22_over_v,0],Ydata_d22(:,1)));
+plot(Ydata_d22(:,1),Ydata_d22(:,2),'*',Ydata_d22(:,1),polyval([TN.Y_coef_d22_over_v,0],Ydata_d22(:,1)));
+legend("Measured","Fit");xlabel("Velocity [m/s]");ylabel("Force [N]");
 title('Fit of damping Y'); grid on;
 fit_damping_plot.Position=[100,100,1000,600];
 % Resistance, not that now it is not used in the model
@@ -205,6 +207,7 @@ BAT.power_others=5; % suppose other components consumes 5W in total on average
 BAT.converter_efficiency=0.95; % suppose the buck-boost converter has an efficiency of 95%
 
 %% Kalman filter
+kalman.enable_flag=0; % 0 for disable kalman and 1 for enable
 kalman.TSampling = 0.1;
 unknownForcesExpectedAmplitude = diag([1.2 1.2 1.2]);
 inverseFullMass = eye(3) / (TN.rigid_body_Mass + TN.added_Mass);
