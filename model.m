@@ -138,10 +138,12 @@ shaft.fullFrictionTranslatedTo1 = DC.Cm + shaft.friction1 + shaft.friction2 * sh
 %% Propellers
 propeller.diameter = 0.065;
 propeller.waterDensity = 1000;
-propellerCurves = importdata('propeller.txt');
-propeller.J = propellerCurves.data(:,1);
-propeller.KT = propellerCurves.data(:,2);
-propeller.KQ = propellerCurves.data(:,3);
+KTCurve = importdata('KT.txt');
+KQCurve = importdata('KQ.txt');
+propeller.JForKT = KTCurve(:,1);
+propeller.KT = KTCurve(:,2);
+propeller.JForKQ = KQCurve(:,1);
+propeller.KQ = KQCurve(:,2);
 
 
 %% DC Motor Controller, struct DCon
