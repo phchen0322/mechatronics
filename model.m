@@ -259,12 +259,12 @@ Eta_Ref=[0;0;0];
 %% Setting the important parameters together
 TA.config=3; % Choosing thrust allocation configuration
 kalman.enable_flag=0; % enable or disable kalman filter in closed loop
-EN.current_speed=[0*0.15 0*0.15]; % Set current speed(in NED frame, only X and Y)
+EN.current_speed=[-0.0*0.15 0*0.15]; % Set current speed(in NED frame, only X and Y)
 EN.current_v_Sample=[time_Vector repmat(EN.current_speed,time_all/time_interval,1)];
 V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
 EN.wind_speed=[0 0]; % Set wind speed (in NED frame, only X and Y)
 EN.wind_v_Sample=[time_Vector repmat(EN.wind_speed,time_all/time_interval,1)];%NED
-Eta_Ref=[1;0;0]; % desired set point
+Eta_Ref=[1;0;pi/2]; % desired set point
 
 %% Simulation
 paramStruct.StartTime="0";
@@ -308,13 +308,14 @@ km_Eta_est=squeeze(out.KM_est_out);
 km_plot=figure();
 title_char=["Estimated","True","Measured"];
 for i=1:3
-    subplot(1,3,i);
+    subplot(1,3,(i+1)-3*floor(i/3));
     plot(T_out,km_Eta_est(i*3-2,:),T_out,km_Eta_est(i*3-1,:),T_out,km_Eta_est(i*3,:));
     title(title_char(i))
     legend('x','y','\psi');
+    grid on;
+    xlabel("Time [s]");
 end
-km_plot.Position=[100,100,1000,600];
-
+km_plot.Position=[100,100,1000,400];
 
 %% Post processing for equation motion
 Eta=squeeze(out.Eta).';
@@ -362,6 +363,7 @@ for i=1:3
     plot([0,T_out(end)],[Eta_Ref(i),Eta_Ref(i)],T_out,Eta(:,i));
     legend("Setpoint","Actual",'Location','best');
     title(title_char(i)+" (NED)");
+    grid on;
 end
 ax =subplot(3,2,2);status_chr=["ON","OFF"];config_chr=["III","V"];
 config_string=sprintf("StartingPoint = (%.2f, %.2f, %.2f)\n",Eta_initial(1),Eta_initial(2),Eta_initial(3));
@@ -375,5 +377,7 @@ text(0,0.5,config_string);
 set (ax, 'visible', 'off')
 subplot(3,2,[4,6]);
 plot(Eta(:,2),Eta(:,1));xlabel('y');ylabel('x');
-title("Trace (NED)");axis equal;
+title("Trace (NED)");axis equal;grid on;
 dp_plot.Position=[100,100,800,500];
+% dp_plot_with_bat;
+% save(".\OfflineModelOutput\offline_"+num2str(EN.current_speed(1)/0.15*100,2)+"_"+num2str(Eta_Ref(3),3)+".mat","config_string","Eta_Ref","Eta","T_out");
