@@ -158,8 +158,8 @@ DCon.N=100; %4 parameters for a PID controller
 
 %% Speed Setting input (just for PID experiment)
 DCon.w_ref=[0,0;15,500/60*pi*2;25,500/60*pi*2;40,300/60*pi*2;41,700/60*pi*2;...
-    60,700/60*pi*2;75,900/60*pi*2;90,900/60*pi*2;time_all,700/60*pi*2];
-%DCon.w_ref=[0,900/60*pi*2;time_all,900/60*pi*2];
+   60,700/60*pi*2;75,900/60*pi*2;90,900/60*pi*2;time_all,700/60*pi*2];
+% DCon.w_ref=[0,900/60*pi*2;time_all,900/60*pi*2];
 
 %% Forces input (just for expriment)
 % force_x_Sample=sin(time_Vector/time_all*4*pi);
@@ -298,10 +298,12 @@ W_dcon1_ref=out.dcon_out(:,1);
 W_dcon1=out.dcon_out(:,2);
 dcon_performance_plot=figure();
 subplot(1,2,1);plot(T_out,W_dcon1_ref,T_out,W_dcon1);
-legend("Set Speed","Speed",'Location', 'northwest'); title('Controller Performance');
-subplot(1,2,2);plot(T_out,(W_dcon1_ref-W_dcon1)./W_dcon1_ref,[0,time_all],[0.02,0.02],[0,time_all],[-0.02,-0.02]);
-legend("Error Percentage","2% Margin","-2% Margin"); title("Error");
-dcon_performance_plot.Position=[100,100,1000,600];
+ylabel("Speed [rad/s]"); xlabel("Time [s]");grid on;
+legend("Set Speed","Speed",'Location', 'best'); title('DC Controller Starboard');
+subplot(1,2,2);plot(T_out,100.*(W_dcon1_ref-W_dcon1)./W_dcon1_ref,[0,time_all],100.*[0.02,0.02],[0,time_all],100.*[-0.02,-0.02]);
+legend("Relative Error","2% Margin","-2% Margin"); title("Error Percentage");ytickformat('percentage');
+xlabel("Time [s]"); grid on;
+dcon_performance_plot.Position=[100,100,800,300];
 
 %% Plot for karlman filter performance
 km_Eta_est=squeeze(out.KM_est_out);

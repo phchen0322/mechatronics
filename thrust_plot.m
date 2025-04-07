@@ -1,0 +1,16 @@
+close all;clear;clc;
+thrust_Raw=load('data_Thrust.mat');
+thrust_plot_fig=figure();
+subplot(1,3,1);
+plot(thrust_Raw.data_Thrust_ps(:,1),thrust_Raw.data_Thrust_ps(:,2),'*-');
+title("Thrust Portside");
+grid on; xlabel("Speed [rpm]"); ylabel("Force [N]");
+subplot(1,3,2);
+plot(thrust_Raw.data_Thrust_sb(:,1),thrust_Raw.data_Thrust_sb(:,2),'*-');
+title("Thrust Starboard");
+grid on; xlabel("Speed [rpm]"); ylabel("Force [N]");
+subplot(1,3,3);
+plot(thrust_Raw.data_Thrust_bow(:,1),thrust_Raw.data_Thrust_bow(:,2),'*-');
+title("Bow Thruster");
+grid on; xlabel("Gain"); ylabel("Force [N]");
+thrust_plot_fig.Position=[100,100,800,300];
