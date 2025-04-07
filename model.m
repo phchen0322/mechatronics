@@ -125,15 +125,13 @@ shaft.inertia1 = 1.974e-5; % kg m2
 shaft.inertia2 = 2.06293e-6; % kg m2
 shaft.inertia3 = 1.96350e-8; % kg m2
 
-shaft.friction1 = 0; % kg m2/s
-shaft.friction2 = 0; % kg m2/s
-shaft.friction3 = 0; % kg m2/s
+shaft.frictionTranslatedTo1 = (1 - 0.94 * 0.95 * 0.96 * 0.95^2) * 0.02573 / 648; % kg m2/s
 
 shaft.gearRatio1to2 = 1/3;
 shaft.gearRatio2to3 = 1;
 
 shaft.fullInertiaTranslatedTo1 = DC.Jm + shaft.inertia1 + shaft.inertia2 * shaft.gearRatio1to2^2 + shaft.inertia3 * shaft.gearRatio1to2^2 * shaft.gearRatio2to3^2;
-shaft.fullFrictionTranslatedTo1 = DC.Cm + shaft.friction1 + shaft.friction2 * shaft.gearRatio1to2^2 + shaft.friction3 * shaft.gearRatio1to2^2 * shaft.gearRatio2to3^2;
+shaft.fullFrictionTranslatedTo1 = DC.Cm + shaft.frictionTranslatedTo1;
 
 %% Propellers
 propeller.diameter = 0.065;
