@@ -4,10 +4,23 @@ close all
 
 
 %% INPUTS
+%% Simulation definition
+initialPosition = [0; 0; 0]; % [x; y; psi] initial values
+initialVelocity = [0; 0; 0]; % [u; v; r] initial values with respect to current. True initial velocity is initialVelocity + currentVelocity
+targetPosition = [0.5; 0.2; pi/4]; % [x; y; psi] target values
+
+currentVelocity = [-0.0*0.15 0*0.15]; % [u v] current velocity in NED frame
+windVelocity = [0 0]; % [u v] wind velocity in NED frame
+
+thrusterConfiguration = 3; % 3 for Configuration III, 5 for Configuration V. Other thruster configurations NOT supported
+kalmanFilterEnabled = 0; % 0 for true position feedback control, 1 for Kalman filter position estimation feedback control
+
+
 %% Simulation Timeline
 time_interval=0.01; % interval 0.01 seconds
 time_all=200; % total time 200 seconds
 time_Vector = linspace(0,time_all,time_all/time_interval).';
+
 
 %% Equations of motion, struct TN (TitoNeri)
 % Constants
@@ -23,15 +36,8 @@ TN.d_33_c2 = 4.8;
 
 % Estimation of d11 d22 d33
 Xdata_d11=importdata('Xforce.txt'); %Damping in surge
-% X_coef_d11=polyfit(Xdata_d11(:,1),Xdata_d11(:,2),3);% order=3
-% fprintf("d11(u)=(%.3f)u3+(%.3f)u2+(%.3f)u+(%.3f)\n",X_coef_d11)
 Ydata_d22=importdata("Yforce.txt"); %Damping in sway
-% Ydata_d22(:,2)=Ydata_d22(:,2)-mean(Ydata_d22(:,2)); % move the YForce data to pass the orgin
-% plot(Yddata(:,1),Yddata(:,2));
-% Y_coef_d22=polyfit(Ydata_d22(:,1),Ydata_d22(:,2),3);% order=3
-% fprintf("d22(v)=(%.3f)v3+(%.3f)v2+(%.3f)v+(%.3f)\n",Y_coef_d22)
 N_coef_d33=[1/80*TN.d_33_c1*TN.length^4 0 1/12*TN.d_33_c2*TN.length^2 0]; %Damping in yaw
-% fprintf("d33(r)=(%.3f)r3+(%.3f)r2+(%.3f)r+(%.3f)\n",N_coef_d33)
 % quadratic real coefficient polynomials, Note that this is from external
 % excel fit 3-order by constraining passing the origin (see XYForce.xlsx)
 TN.X_coef_d11_over_u=[17.601,-1.2378,0.6164];
@@ -49,16 +55,13 @@ plot(Ydata_d22(:,1),Ydata_d22(:,2),'*',Ydata_d22(:,1),polyval([TN.Y_coef_d22_ove
 legend("Measured","Fit");xlabel("Velocity [m/s]");ylabel("Force [N]");
 title('Fit of damping Y'); grid on;
 fit_damping_plot.Position=[100,100,1000,600];
-% Resistance, not that now it is not used in the model
-resistance_table = importdata('resistance.txt');
-TN.resistance_coefs = polyfit(resistance_table(:,1),resistance_table(:,2),3);
-TN.resistance_coefs(4) = 0;
 
 % For the vessel Tito Neri (TN)
 TN.inertia_zz = 1/20 * TN.mass*(TN.length^2+TN.beam^2);
 TN.rigid_body_Mass = diag([TN.mass TN.mass TN.inertia_zz]);
 TN.added_Mass = diag([TN.x_u_dot TN.y_v_dot TN.N_r_dot]); % Added Mass sign positive
 TN.matrix_Mass = TN.rigid_body_Mass + TN.added_Mass;
+
 
 %% Environmental Forces, struct EN
 % Current
@@ -84,26 +87,6 @@ TA.config5_T=[0,1,0;1,0,1;-0.35,-0.065,0.35];
 TA.config5_T_inv=inv(TA.config5_T);
 TA.config=3; % the chosen config
 thrust_Raw=load('data_Thrust.mat');
-% ps data: rpm=501.15 \sqrt(thrust)+186.43
-%TA.poly_thrust_ps1=[3.540E-6,-7.340E-4,0];
-%TA.poly_thrust_ps2=[3.263E-6,-9.771E-4,0];
-% TA.poly_thrust_ps=[511.95,137.04];
-% TA.poly_thrust_sb=[602.77,145.38];
-% TA.poly_thrust_bow=[0.2934,0.1577];
-% Note that in the wetmodel dc motors are 608.58, 200
-% Note that in the wetmodel bow thruster is 0.13 0.17 (*0.8)
-
-% plot_thrust_fit=figure();
-% subplot(1,3,1);
-% plot(thrust_Raw.data_Thrust_ps(:,1),thrust_Raw.data_Thrust_ps(:,2), 'o',...
-%     thrust_cal_sign(TA.poly_thrust_ps,-3:0.05:3),[-3:0.05:3])
-% subplot(1,3,2);
-% plot(thrust_Raw.data_Thrust_sb(:,1),thrust_Raw.data_Thrust_sb(:,2), 'o',...
-%     thrust_cal_sign(TA.poly_thrust_sb,-3:0.05:3),[-3:0.05:3])
-% subplot(1,3,3);
-% plot(thrust_Raw.data_Thrust_bow(:,1),thrust_Raw.data_Thrust_bow(:,2), 'o',...
-%     thrust_bow_sign(TA.poly_thrust_bow,[-2:0.05:2]),[-2:0.05:2])
-% set(plot_thrust_fit,'position',[100,100,1000,600])
 
 
 %% DC Motors, struct DC
@@ -120,6 +103,7 @@ DC.wrated=564.9; %rated speed, rad/s;
 DC.irated=9;%rated current, A
 DC.vrated=12;%rated voltage, V
 
+
 %% Shafts
 shaft.inertia1 = 1.974e-5; % kg m2
 shaft.inertia2 = 2.06293e-6; % kg m2
@@ -132,6 +116,7 @@ shaft.gearRatio2to3 = 1;
 
 shaft.fullInertiaTranslatedTo1 = DC.Jm + shaft.inertia1 + shaft.inertia2 * shaft.gearRatio1to2^2 + shaft.inertia3 * shaft.gearRatio1to2^2 * shaft.gearRatio2to3^2;
 shaft.fullFrictionTranslatedTo1 = DC.Cm + shaft.frictionTranslatedTo1;
+
 
 %% Propellers
 propeller.diameter = 0.065;
@@ -159,7 +144,19 @@ DCon.w_ref=[0,0;15,500/60*pi*2;25,500/60*pi*2;40,300/60*pi*2;41,700/60*pi*2;...
    60,700/60*pi*2;75,900/60*pi*2;90,900/60*pi*2;time_all,700/60*pi*2];
 % DCon.w_ref=[0,900/60*pi*2;time_all,900/60*pi*2];
 
-%% Forces input (just for expriment)
+%% Input forces (just for given input force experiments)
+function force = step_force(max_force,t1,t2,t3,t)
+force=zeros(length(t),1);
+for i = 1:length(t)
+    if t(i)<t1
+        force(i)=max_force*(t(i)/t1);
+    elseif t(i)<t2
+        force(i)=max_force;
+    elseif t(i)<t3
+        force(i)=max_force*(t3-t(i))/(t3-t2);
+    end
+end
+end
 % force_x_Sample=sin(time_Vector/time_all*4*pi);
 % force_x_Sample=step_force(1,2,8,10,time_Vector);
 force_x_Sample=zeros(time_all/time_interval,1);
@@ -169,20 +166,11 @@ force_y_Sample=step_force(0.5,10,35,45,time_Vector);
 force_r_Sample=zeros(time_all/time_interval,1);
 % force_r_Sample=step_force(1,2,8,10,time_Vector);
 tau_Sample=[time_Vector force_x_Sample force_y_Sample force_r_Sample];
-% plot(time_Vector,force_x_Sample,time_Vector,force_y_Sample,time_Vector,force_r_Sample);
-% legend;
+
 
 %% Thrust Simulatior, simulating the output thrust by acuators, structure TSim
 % based on the input rpm, andgle and gain, calculate the tau (BODY frame)
 % interpolation of the curve thrust to speed, but add (0,0)
-% thrust_Raw=load('data_Thrust.mat');
-% TSim.thrust_ps_rpm=thrust_Raw.data_Thrust_ps;
-% TSim.thrust_ps_rpm=[TSim.thrust_ps_rpm(1:8,:);0,0;TSim.thrust_ps_rpm(9:end,:)];
-% TSim.thrust_sb_rpm=thrust_Raw.data_Thrust_sb;
-% TSim.thrust_sb_rpm=[TSim.thrust_sb_rpm(1:8,:);0,0;TSim.thrust_sb_rpm(9:end,:)];
-% TSim.thrust_bow_gain=thrust_Raw.data_Thrust_bow;
-% TSim.thrust_bow_gain(8,:)=[0,0];
-% -0.5 for -90degree +0.5 for -90 degree, use config 3
 TSim.config3_T=TA.config3_T;
 speed_ps_angle_Sample=0*ones(time_all/time_interval,1);
 speed_sb_angle_Sample=0*ones(time_all/time_interval,1);
@@ -192,19 +180,12 @@ speed_bow_gain_Sample=0*ones(time_all/time_interval,1);
 TSim.speed_Sampe=[time_Vector,speed_ps_angle_Sample,speed_sb_angle_Sample,...
     speed_ps_rpm_Sample,speed_sb_rpm_Sample,speed_bow_gain_Sample];
 
-%% PID Controllers for calculate required forces from position error
-% struct PCon
-PCon.KX=[0.005;0;0.01;100]; %P, I, D and N
-PCon.KY=[0.1;0;0.1;100]; %P, I, D and N
-PCon.KN=[0.1;0;0;100]; %P, I, D and N
-% PCon.KX=[0.006673;0.0004631;2.1557;12.6]; %P, I, D and N
-% PCon.KY=[0.1697;0.0007710;4.7815;6.41]; %P, I, D and N
-% PCon.KN=[0.14737;0.004640;1.0114;1.7889]; %P, I, D and N
 
 %% Battery, struct BAT
 BAT=load('BatParameters.mat').Bat;
 BAT.power_others=5; % suppose other components consumes 5W in total on average
 BAT.converter_efficiency=0.95; % suppose the buck-boost converter has an efficiency of 95%
+
 
 %% Kalman filter
 kalman.enable_flag=0; % 0 for disable kalman and 1 for enable
@@ -247,30 +228,25 @@ zPoles = exp(sPoles * kalman.TSampling);
 
 kalman.discreteControllerGains = place(discreteLinearizationAround0.A, discreteLinearizationAround0.B, zPoles);
 
-%% Initial conditions
-V_initial=[0;0;0]; % initial velocity as zeros
-% V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
-Eta_initial=[0;0;0]; % initial position as zeros
-
-%% Set conditions
-Eta_Ref=[0;0;0];
-% Eta_Ref=[0.5;-0.8;0.4];
 
 %% Setting the important parameters together
-TA.config=3; % Choosing thrust allocation configuration
-kalman.enable_flag=0; % enable or disable kalman filter in closed loop
-EN.current_speed=[-0.0*0.15 0*0.15]; % Set current speed(in NED frame, only X and Y)
+TA.config = thrusterConfiguration; % Choosing thrust allocation configuration
+kalman.enable_flag = kalmanFilterEnabled; % enable or disable kalman filter in closed loop
+EN.current_speed = currentVelocity; % Set current speed(in NED frame, only X and Y)
 EN.current_v_Sample=[time_Vector repmat(EN.current_speed,time_all/time_interval,1)];
-V_initial=[0;0;0]+[EN.current_speed';0]; % initial velocity as zeros related to current
-EN.wind_speed=[0 0]; % Set wind speed (in NED frame, only X and Y)
+Eta_initial = initialPosition;
+V_initial = initialVelocity + [EN.current_speed';0]; % initial velocity as zeros related to current
+EN.wind_speed = windVelocity; % Set wind speed (in NED frame, only X and Y)
 EN.wind_v_Sample=[time_Vector repmat(EN.wind_speed,time_all/time_interval,1)];%NED
-Eta_Ref=[1;0;pi/2]; % desired set point
+Eta_Ref = targetPosition; % desired set point
+
 
 %% Simulation
 paramStruct.StartTime="0";
 paramStruct.StopTime=string(time_all);
 paramStruct.FixedStep=string(time_interval);
 out=sim("simulation.slx",paramStruct);
+
 
 %% OUTPUT
 T_out=out.tout;
